@@ -7,7 +7,7 @@ function getApiBaseUrl() {
   console.log('🔧 Current window.API_BASE_URL:', window.API_BASE_URL);
   
   // Check for environment variable first (set by Docker/K8s)
-  if (window.API_BASE_URL && window.API_BASE_URL !== 'undefined') {
+  if (window.API_BASE_URL && window.API_BASE_URL !== 'undefined' && window.API_BASE_URL !== '${API_BASE_URL}') {
     console.log('🔧 Using existing window.API_BASE_URL:', window.API_BASE_URL);
     return window.API_BASE_URL;
   }
@@ -24,6 +24,12 @@ function getApiBaseUrl() {
   const port = window.location.port;
   
   console.log('🔧 Using fallback logic - hostname:', hostname, 'protocol:', protocol, 'port:', port);
+  
+  // Render.com deployment
+  if (hostname.includes('.onrender.com')) {
+    console.log('🔧 Render.com detected, returning Render backend URL');
+    return 'https://humor-game-backend.onrender.com/api';
+  }
   
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     // Local development - use nginx proxy
@@ -45,6 +51,10 @@ function getApiBaseUrl() {
 }
 
 window.API_BASE_URL = getApiBaseUrl();
+
+// Signal that config is ready
+window.CONFIG_READY = true;
+window.CONFIG = { API_BASE_URL: window.API_BASE_URL };
 
 // Log configuration for debugging
 console.log('🔧 Frontend Configuration:', {

@@ -25,18 +25,34 @@
       
       // Environment-driven API configuration
       // Works in both Docker Compose (nginx proxy) and Kubernetes (ingress)
-      window.API_BASE_URL = '${API_BASE_URL}';
+      var configuredUrl = '${API_BASE_URL}';
       window.ENVIRONMENT = '${NODE_ENV}';
       window.BUILD_TIMESTAMP = '${BUILD_TIMESTAMP}';
       
-      // Validation and fallbacks
-      if (!window.API_BASE_URL || window.API_BASE_URL === '') {
+      // Intelligent URL detection
+      function determineApiUrl() {
+        // If configured and not a template placeholder
+        if (configuredUrl && configuredUrl !== '' && configuredUrl !== '${API_BASE_URL}') {
+          console.log('🔧 Using configured API URL:', configuredUrl);
+          return configuredUrl;
+        }
+        
+        // Render.com deployment detection
+        if (window.location.hostname.includes('.onrender.com')) {
+          console.log('🔧 Render.com detected, using Render backend URL');
+          return 'https://humor-game-backend.onrender.com/api';
+        }
+        
+        // Fallback for local/k8s environments
         console.warn('⚠️ API_BASE_URL not set, using fallback /api');
-        window.API_BASE_URL = '/api';
+        return '/api';
       }
+      
+      window.API_BASE_URL = determineApiUrl();
       
       // Ensure configuration is complete before proceeding
       window.CONFIG_READY = true;
+      window.CONFIG = { API_BASE_URL: window.API_BASE_URL };
       
       console.log('🔧 Environment:', window.ENVIRONMENT);
       console.log('🔧 API Base URL set to:', window.API_BASE_URL);

@@ -30,8 +30,9 @@ RUN sed -i "s|\${API_BASE_URL}|https://humor-game-backend.onrender.com/api|g" /u
     sed -i "s|\${NODE_ENV}|production|g" /usr/share/nginx/html/index.html && \
     sed -i "s|\${BUILD_TIMESTAMP}|$(date -Iseconds)|g" /usr/share/nginx/html/index.html
 
-# Create config.js with correct API URL
+# Create config.js with correct API URL (as backup)
 RUN echo 'window.API_BASE_URL = "https://humor-game-backend.onrender.com/api";' > /usr/share/nginx/html/config.js && \
+    echo 'window.CONFIG_READY = true;' >> /usr/share/nginx/html/config.js && \
     echo 'window.CONFIG = { API_BASE_URL: window.API_BASE_URL };' >> /usr/share/nginx/html/config.js
 
 # Fix nginx permissions
