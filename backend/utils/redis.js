@@ -1,63 +1,92 @@
 // Redis Connection and Caching Utilities
 // Handles caching for leaderboard, user stats, and game sessions
 
-const redis = require('redis');
+// Check if Redis is enabled
+const REDIS_ENABLED = process.env.REDIS_ENABLED !== 'false';
 
-// Build Redis connection URL properly for both Docker Compose and Kubernetes
-function buildRedisUrl() {
-  // In Kubernetes, REDIS_PORT might be set to tcp://host:port
-  // In Docker Compose, REDIS_PORT is usually just the port number
-  let host = process.env.REDIS_HOST || 'redis';
-  let port = process.env.REDIS_PORT || 6379;
-  const db = process.env.REDIS_DB || 0;
-  const password = process.env.REDIS_PASSWORD;
-  
-  // Handle Kubernetes-style REDIS_PORT (tcp://host:port)
-  if (typeof port === 'string' && port.startsWith('tcp://')) {
-    const urlParts = port.split('://')[1].split(':');
-    host = urlParts[0];
-    port = parseInt(urlParts[1]);
+let redis;
+let client;
+
+if (REDIS_ENABLED) {
+  redis = require('redis');
+
+  // Build Redis connection URL properly for both Docker Compose and Kubernetes
+  function buildRedisUrl() {
+    // In Kubernetes, REDIS_PORT might be set to tcp://host:port
+    // In Docker Compose, REDIS_PORT is usually just the port number
+    let host = process.env.REDIS_HOST || 'redis';
+    let port = process.env.REDIS_PORT || 6379;
+    const db = process.env.REDIS_DB || 0;
+    const password = process.env.REDIS_PASSWORD;
+    
+    // Handle Kubernetes-style REDIS_PORT (tcp://host:port)
+    if (typeof port === 'string' && port.startsWith('tcp://')) {
+      const urlParts = port.split('://')[1].split(':');
+      host = urlParts[0];
+      port = parseInt(urlParts[1]);
+    }
+    
+    // Ensure port is a number
+    port = parseInt(port) || 6379;
+    
+    if (password) {
+      return `redis://:${password}@${host}:${port}/${db}`;
+    } else {
+      return `redis://${host}:${port}/${db}`;
+    }
   }
-  
-  // Ensure port is a number
-  port = parseInt(port) || 6379;
-  
-  if (password) {
-    return `redis://:${password}@${host}:${port}/${db}`;
-  } else {
-    return `redis://${host}:${port}/${db}`;
+
+  client = redis.createClient({
+    url: buildRedisUrl(),
+    socket: {
+      family: 4, // Force IPv4
+      connectTimeout: 10000,
+      lazyConnect: true
+    }
+  });
+
+  // Redis event handlers
+  client.on('error', (err) => {
+    console.error('❌ Redis Client Error:', err);
+  });
+
+  client.on('connect', () => {
+    console.log('🔗 Redis: Connecting...');
+  });
+
+  client.on('ready', () => {
+    console.log('✅ Redis: Connected and ready!');
+  });
+
+  client.on('end', () => {
+    console.log('🔌 Redis: Connection ended');
+  });
+
+  client.on('reconnecting', () => {
+    console.log('🔄 Redis: Reconnecting...');
+  });
+} else {
+  console.log('⚠️ Redis is DISABLED - using in-memory fallback');
+}
+
+// ========================================
+// IN-MEMORY CACHE FALLBACK (when Redis is disabled)
+// ========================================
+const memoryCache = new Map();
+const memoryCacheTTL = new Map();
+
+function cleanExpiredMemoryCache() {
+  const now = Date.now();
+  for (const [key, expiry] of memoryCacheTTL.entries()) {
+    if (expiry && expiry < now) {
+      memoryCache.delete(key);
+      memoryCacheTTL.delete(key);
+    }
   }
 }
 
-const client = redis.createClient({
-  url: buildRedisUrl(),
-  socket: {
-    family: 4, // Force IPv4
-    connectTimeout: 10000,
-    lazyConnect: true
-  }
-});
-
-// Redis event handlers
-client.on('error', (err) => {
-  console.error('❌ Redis Client Error:', err);
-});
-
-client.on('connect', () => {
-  console.log('🔗 Redis: Connecting...');
-});
-
-client.on('ready', () => {
-  console.log('✅ Redis: Connected and ready!');
-});
-
-client.on('end', () => {
-  console.log('🔌 Redis: Connection ended');
-});
-
-client.on('reconnecting', () => {
-  console.log('🔄 Redis: Reconnecting...');
-});
+// Clean expired items every minute
+setInterval(cleanExpiredMemoryCache, 60000);
 
 // ========================================
 // REDIS UTILITY CLASS
@@ -66,6 +95,7 @@ client.on('reconnecting', () => {
 class RedisCache {
   constructor() {
     this.client = client;
+    this.enabled = REDIS_ENABLED;
     this.defaultTTL = parseInt(process.env.REDIS_TTL) || 3600; // 1 hour default
   }
 
@@ -74,6 +104,10 @@ class RedisCache {
    * @returns {Promise<void>}
    */
   async connect() {
+    if (!this.enabled) {
+      console.log('⚠️ Redis disabled - using memory cache');
+      return;
+    }
     try {
       if (!this.client.isOpen) {
         await this.client.connect();
@@ -89,6 +123,9 @@ class RedisCache {
    * @returns {Promise<string>} PONG response
    */
   async ping() {
+    if (!this.enabled) {
+      return 'PONG (memory)';
+    }
     try {
       return await this.client.ping();
     } catch (error) {
@@ -105,6 +142,14 @@ class RedisCache {
    * @returns {Promise<string>} OK response
    */
   async set(key, value, ttl = null) {
+    if (!this.enabled) {
+      const effectiveTTL = ttl || this.defaultTTL;
+      memoryCache.set(key, JSON.stringify(value));
+      if (effectiveTTL) {
+        memoryCacheTTL.set(key, Date.now() + (effectiveTTL * 1000));
+      }
+      return 'OK';
+    }
     try {
       const serializedValue = JSON.stringify(value);
       const options = {};
@@ -130,6 +175,17 @@ class RedisCache {
    * @returns {Promise<any>} Parsed value or null if not found
    */
   async get(key) {
+    if (!this.enabled) {
+      // Check expiry
+      const expiry = memoryCacheTTL.get(key);
+      if (expiry && expiry < Date.now()) {
+        memoryCache.delete(key);
+        memoryCacheTTL.delete(key);
+        return null;
+      }
+      const value = memoryCache.get(key);
+      return value ? JSON.parse(value) : null;
+    }
     try {
       const value = await this.client.get(key);
       if (value === null) {
@@ -151,6 +207,12 @@ class RedisCache {
    * @returns {Promise<number>} Number of keys deleted
    */
   async del(key) {
+    if (!this.enabled) {
+      const existed = memoryCache.has(key);
+      memoryCache.delete(key);
+      memoryCacheTTL.delete(key);
+      return existed ? 1 : 0;
+    }
     try {
       const result = await this.client.del(key);
       console.log(`🗑️  Deleted cache key: ${key}`);
@@ -481,6 +543,10 @@ const gameCache = new GameCache();
 
 // Helper function to ensure connection before operations
 async function ensureConnection() {
+  // Skip if Redis is disabled
+  if (!REDIS_ENABLED) {
+    return;
+  }
   if (!gameCache.client.isOpen) {
     await gameCache.connect();
   }
