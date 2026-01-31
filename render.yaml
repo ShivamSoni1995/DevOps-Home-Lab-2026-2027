@@ -58,11 +58,8 @@ services:
   - type: web
     name: humor-game-frontend
     runtime: docker
-    dockerfilePath: ./frontend/Dockerfile
+    dockerfilePath: ./frontend/Dockerfile.render
     dockerContext: ./frontend
-    envVars:
-      - key: API_BASE_URL
-        value: https://humor-game-backend.onrender.com/api
     plan: free
 
 # ===================
