@@ -13,7 +13,7 @@ spec:
   ingressClassName: nginx
   # tls:
   # - hosts:
-  #   - gameapp.games  # Production domain with SSL
+  #   - shivamsoni.duckdns.org  # Production domain with SSL
   #   secretName: gameapp-prod-tls
   rules:
     - host: gameapp.local  # For local development (no SSL)
@@ -59,7 +59,7 @@ spec:
                   number: 80
     
     # Production domain
-    - host: gameapp.games  # For production (with SSL)
+    - host: shivamsoni.duckdns.org  # For production (with SSL)
       http:
         paths:
           # API routes - forward to backend
@@ -102,7 +102,7 @@ spec:
                   number: 80
     
     # App subdomain
-    - host: app.gameapp.games
+    - host: app.shivamsoni.duckdns.org
       http:
         paths:
           # API routes - forward to backend
@@ -174,7 +174,7 @@ spec:
   ingressClassName: nginx
   # tls:
   # - hosts:
-  #   - argocd.gameapp.games  # Production ArgoCD with SSL
+  #   - argocd.shivamsoni.duckdns.org  # Production ArgoCD with SSL
   #   secretName: argocd-prod-tls
   rules:
     - host: argocd.gameapp.local  # Local ArgoCD access (no SSL)
@@ -189,7 +189,7 @@ spec:
                   number: 80
     
     # Production ArgoCD access
-    - host: argocd.gameapp.games  # Production ArgoCD access (with SSL)
+    - host: argocd.shivamsoni.duckdns.org  # Production ArgoCD access (with SSL)
       http:
         paths:
           - path: /

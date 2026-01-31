@@ -219,7 +219,7 @@ get-passwords: ## Show important passwords and access information
 	@echo ""
 	@echo "🎮 Application URLs:"
 	@echo "  Local: http://gameapp.local:8080"
-	@echo "  Global: https://gameapp.games (if tunnel configured)"
+	@echo "  Global: https://shivamsoni.duckdns.org (if tunnel configured)"
 
 status: ## Show comprehensive system status
 	@echo "📊 System Status Overview:"

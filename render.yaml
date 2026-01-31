@@ -1,0 +1,90 @@
+# Render.com Infrastructure as Code
+# Deploy: Push to GitHub, connect repo in Render Dashboard
+# Docs: https://render.com/docs/blueprint-spec
+#
+# FREE TIER DEPLOYMENT (No Redis - uses memory store)
+# For full features, uncomment Redis section and upgrade plan
+
+services:
+  # ===================
+  # Backend API Service
+  # ===================
+  - type: web
+    name: humor-game-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: DB_HOST
+        fromDatabase:
+          name: humor-game-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: humor-game-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: humor-game-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: humor-game-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: humor-game-db
+          property: password
+      - key: DATABASE_URL
+        fromDatabase:
+          name: humor-game-db
+          property: connectionString
+      - key: REDIS_ENABLED
+        value: "false"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        value: https://humor-game-frontend.onrender.com
+    healthCheckPath: /health
+    plan: free
+
+  # ===================
+  # Frontend Service  
+  # ===================
+  - type: web
+    name: humor-game-frontend
+    runtime: docker
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
+    envVars:
+      - key: API_BASE_URL
+        value: https://humor-game-backend.onrender.com/api
+    plan: free
+
+# ===================
+# PostgreSQL Database
+# ===================
+databases:
+  - name: humor-game-db
+    plan: free
+    databaseName: humor_game
+    user: humor_user
+    postgresMajorVersion: "15"
+
+# ===================
+# OPTIONAL: Redis (requires paid plan)
+# Uncomment below if you upgrade to a paid plan
+# ===================
+# - type: pserv
+#   name: humor-game-redis
+#   runtime: docker
+#   dockerCommand: redis-server --appendonly yes
+#   disk:
+#     name: redis-data
+#     mountPath: /data
+#     sizeGB: 1
+#   plan: starter
