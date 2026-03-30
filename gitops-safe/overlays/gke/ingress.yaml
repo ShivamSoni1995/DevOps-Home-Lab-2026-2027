@@ -1,0 +1,54 @@
+# GKE Ingress — uses ingress-nginx (installed via Helm on GKE)
+# No domain / TLS configured yet. Accessible via LoadBalancer IP on port 80.
+#
+# To add domain + TLS later:
+#   1. Add:  cert-manager.io/cluster-issuer: "letsencrypt-prod"  annotation
+#   2. Uncomment the tls block below
+#   3. Replace the host: field with your real domain
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: humor-game-ingress
+  namespace: humor-game
+  annotations:
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"  # uncomment when domain is ready
+spec:
+  ingressClassName: nginx
+  # tls:                          # uncomment when domain is ready
+  # - hosts:
+  #   - your-domain.com
+  #   secretName: humor-game-tls
+  rules:
+  - http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: backend
+            port:
+              number: 3001
+      - path: /health
+        pathType: Exact
+        backend:
+          service:
+            name: backend
+            port:
+              number: 3001
+      - path: /metrics
+        pathType: Exact
+        backend:
+          service:
+            name: backend
+            port:
+              number: 3001
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              number: 80

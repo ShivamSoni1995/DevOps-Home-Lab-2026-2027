@@ -4,45 +4,52 @@ metadata:
   name: humor-game-safe
   namespace: argocd
 spec:
-  description: Safe GitOps monitoring for Humor Game (read-only initially)
-  
-  # Source repositories - only allow your specific repo
+  description: GitOps project for Humor Game — GKE production
+
+  # Source repositories — replace YOUR_GITHUB_USERNAME with your actual GitHub username.
+  # Run: sed -i 's|YOUR_GITHUB_USERNAME|<your-username>|g' gitops-safe/argocd-project.yaml
   sourceRepos:
-  - 'https://github.com/Osomudeya/DevOps-Home-Lab-2025.git'
-  
+  - 'https://github.com/ShivamSoni1995/DevOps-Home-Lab-2026-2027.git'
+
   # Destination clusters and namespaces
   destinations:
   - namespace: humor-game
     server: https://kubernetes.default.svc
-  
-  # Cluster resource allow list - only allow specific resources
+
+  # Cluster resource allow list — Namespace only (ArgoCD creates it via syncOptions)
   clusterResourceWhitelist:
   - group: ''
     kind: Namespace
-  - group: 'networking.k8s.io'
-    kind: Ingress
-  
-  # Namespace resource allow list - be very restrictive
+
+  # Namespace resource allow list — all resources managed by this project
   namespaceResourceWhitelist:
   - group: ''
     kind: ConfigMap
-  - group: 'apps'
-    kind: Deployment
+  - group: ''
+    kind: Secret
   - group: ''
     kind: Service
   - group: ''
+    kind: ServiceAccount
+  - group: ''
     kind: PersistentVolumeClaim
-  
-  # Resource deny list - prevent dangerous operations
+  - group: 'apps'
+    kind: Deployment
+  - group: 'networking.k8s.io'
+    kind: Ingress
+  - group: 'networking.k8s.io'
+    kind: NetworkPolicy
+  - group: 'autoscaling'
+    kind: HorizontalPodAutoscaler
+
+  # Deny cluster-wide RBAC mutations
   clusterResourceBlacklist:
   - group: 'rbac.authorization.k8s.io'
     kind: ClusterRole
   - group: 'rbac.authorization.k8s.io'
     kind: ClusterRoleBinding
-  
-  # Orphaned resources - don't delete anything automatically
+
   orphanedResources:
-    warn: true  # Warn about orphaned resources but don't delete
-  
-  # Signature keys - none for now (we'll add later if needed)
+    warn: true
+
   signatureKeys: []

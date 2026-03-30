@@ -1,0 +1,159 @@
+# CI Pipeline — Build, Push to Artifact Registry, Update GitOps Manifests
+#
+# This workflow replaces the old push-based deploy.yml.
+# GitHub Actions handles CI only. ArgoCD handles CD.
+#
+# Flow: push code → test → build images → push to AR → update kustomize tags → ArgoCD syncs
+#
+# Required GitHub Secrets:
+#   GCP_PROJECT_ID        — GCP project ID (e.g. my-project-123456)
+#   WIF_PROVIDER          — Workload Identity Federation provider resource name
+#                           (projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL/providers/PROVIDER)
+#   WIF_SERVICE_ACCOUNT   — GCP service account email (github-actions-sa@PROJECT_ID.iam.gserviceaccount.com)
+
+name: CI — Build & GitOps Update
+
+on:
+  push:
+    branches: [main]
+    paths:
+    - 'backend/**'
+    - 'frontend/**'
+    - '.github/workflows/ci.yml'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  GCP_REGION: us-central1
+  AR_REPO: humor-game
+
+jobs:
+  # ----------------------------------------------------------------
+  # Job 1: Test & Lint (runs on PRs and pushes)
+  # ----------------------------------------------------------------
+  test:
+    name: Test & Lint
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install and test backend
+      run: |
+        cd backend
+        npm ci
+        npm test
+
+    - name: Lint backend
+      run: |
+        cd backend
+        npm run lint
+
+    - name: Install and lint frontend
+      run: |
+        cd frontend
+        npm ci
+        npm run lint
+
+  # ----------------------------------------------------------------
+  # Job 2: Build images, push to Artifact Registry (main branch only)
+  # ----------------------------------------------------------------
+  build-and-push:
+    name: Build & Push Images
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write  # Required for Workload Identity Federation
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tag }}
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Authenticate to GCP
+      id: auth
+      uses: google-github-actions/auth@v2
+      with:
+        workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+        service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+    - uses: google-github-actions/setup-gcloud@v2
+
+    - name: Configure Docker for Artifact Registry
+      run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+    - uses: docker/setup-buildx-action@v3
+
+    - name: Generate image tag from commit SHA
+      id: meta
+      run: echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+    - name: Build and push backend
+      uses: docker/build-push-action@v5
+      with:
+        context: ./backend
+        push: true
+        tags: |
+          ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.AR_REPO }}/backend:${{ steps.meta.outputs.tag }}
+          ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.AR_REPO }}/backend:latest
+        cache-from: type=gha,scope=backend
+        cache-to: type=gha,mode=max,scope=backend
+
+    - name: Build and push frontend
+      uses: docker/build-push-action@v5
+      with:
+        context: ./frontend
+        push: true
+        tags: |
+          ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.AR_REPO }}/frontend:${{ steps.meta.outputs.tag }}
+          ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.AR_REPO }}/frontend:latest
+        cache-from: type=gha,scope=frontend
+        cache-to: type=gha,mode=max,scope=frontend
+
+  # ----------------------------------------------------------------
+  # Job 3: Update GitOps overlay with new image tags (commit back)
+  # ----------------------------------------------------------------
+  update-manifests:
+    name: Update GitOps Manifests
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required to push manifest changes back to repo
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        # Pass the token explicitly so git push uses authenticated HTTPS.
+        # If branch protection requires PRs, use a PAT stored as GITOPS_TOKEN
+        # and replace github.token with secrets.GITOPS_TOKEN below.
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - uses: imranismail/setup-kustomize@v2
+
+    - name: Update image tags in GKE overlay
+      env:
+        IMAGE_TAG: ${{ needs.build-and-push.outputs.image-tag }}
+        PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+        REGION: ${{ env.GCP_REGION }}
+        REPO: ${{ env.AR_REPO }}
+      run: |
+        cd gitops-safe/overlays/gke
+        kustomize edit set image \
+          "humor-game-backend=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/backend:${IMAGE_TAG}" \
+          "humor-game-frontend=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/frontend:${IMAGE_TAG}"
+        echo "Updated kustomization.yaml:"
+        cat kustomization.yaml
+
+    - name: Commit and push manifest update
+      env:
+        IMAGE_TAG: ${{ needs.build-and-push.outputs.image-tag }}
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add gitops-safe/overlays/gke/kustomization.yaml
+        git diff --staged --quiet || git commit -m "ci: update GKE images to ${IMAGE_TAG} [skip ci]"
+        git push

@@ -1,11 +1,19 @@
-name: 🚀 Deploy to Kubernetes
+# ============================================================
+# RETIRED — superseded by ci.yml + ArgoCD GitOps CD
+#
+# This workflow performed push-based CD (kubectl apply) directly
+# on every push to main. It is DISABLED to prevent conflicts.
+#
+# Replaced by:
+#   1. .github/workflows/ci.yml    — CI: test → build → push to AR → update GitOps manifests
+#   2. ArgoCD watching gitops-safe/overlays/gke — CD: syncs GKE cluster from Git
+#
+# To re-enable for debugging: change `workflow_dispatch` back to `push`.
+# ============================================================
+name: 🚀 Deploy to Kubernetes (RETIRED — DO NOT RE-ENABLE)
 
 on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
-  workflow_dispatch:
+  workflow_dispatch:  # manual-only; all automatic triggers removed
 
 env:
   REGISTRY: localhost:5001

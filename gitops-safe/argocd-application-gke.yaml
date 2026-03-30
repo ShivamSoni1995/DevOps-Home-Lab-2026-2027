@@ -1,0 +1,54 @@
+# ArgoCD Application targeting the GKE overlay.
+# Apply this to the GKE cluster after ArgoCD is installed:
+#
+#   kubectl apply -f gitops-safe/argocd-project.yaml -n argocd
+#   kubectl apply -f gitops-safe/argocd-application-gke.yaml -n argocd
+#
+# Before applying, replace YOUR_GITHUB_USERNAME with your actual GitHub username:
+#   sed -i 's|YOUR_GITHUB_USERNAME|<your-username>|g' gitops-safe/argocd-application-gke.yaml
+#   sed -i 's|YOUR_GITHUB_USERNAME|<your-username>|g' gitops-safe/argocd-project.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: humor-game-gke
+  namespace: argocd
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  project: humor-game-safe
+
+  source:
+    repoURL: https://github.com/ShivamSoni1995/DevOps-Home-Lab-2026-2027.git
+    targetRevision: main
+    path: gitops-safe/overlays/gke
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: humor-game
+
+  syncPolicy:
+    automated:
+      prune: true        # Remove resources deleted from Git
+      selfHeal: true     # Revert manual cluster changes back to Git state
+    syncOptions:
+    - CreateNamespace=true
+    - ApplyOutOfSyncOnly=true
+    - PrunePropagationPolicy=foreground
+    - ServerSideApply=true
+
+  ignoreDifferences:
+  - group: apps
+    kind: Deployment
+    jsonPointers:
+    - /spec/template/metadata/annotations/deployment.kubernetes.io~1revision
+  - group: ""
+    kind: Service
+    jsonPointers:
+    - /spec/clusterIP
+    - /spec/clusterIPs
+  - group: autoscaling
+    kind: HorizontalPodAutoscaler
+    jsonPointers:
+    - /status
+
+  revisionHistoryLimit: 10
