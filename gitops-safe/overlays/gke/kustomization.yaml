@@ -1,6 +1,4 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-
 # ============================================================
 # GKE Production Overlay — project: gke-project-491822
 #
@@ -11,62 +9,53 @@ kind: Kustomization
 #
 # Image tags are updated automatically by CI via `kustomize edit set image`.
 # ============================================================
-
+kind: Kustomization
 namespace: humor-game
-
 # Inherit all base resources (postgres, redis, backend, frontend, configmap, pvc, etc.)
 resources:
 - ../../base
 - ingress.yaml
 - network-policies.yaml
 - hpa.yaml
-- frontend-nginx-config.yaml
-
 # Image overrides — CI updates these tags on every successful build.
 # The `name` field must match the image name used in base deployments.
 # kustomize edit set image "humor-game-backend=REGION-docker.pkg.dev/PROJECT/REPO/backend:TAG"
 images:
 - name: humor-game-backend
   newName: us-central1-docker.pkg.dev/gke-project-491822/humor-game/backend
-  newTag: initial
+  newTag: 26ea967
 - name: humor-game-frontend
   newName: us-central1-docker.pkg.dev/gke-project-491822/humor-game/frontend
-  newTag: initial
-
-patches:
+  newTag: 26ea967
 # --- Fix imagePullPolicy (base uses Never for local k3d) ---
-- target:
-    kind: Deployment
-    name: backend
-  patch: |-
-    - op: replace
-      path: /spec/template/spec/containers/0/imagePullPolicy
-      value: IfNotPresent
-    - op: replace
-      path: /spec/replicas
-      value: 1
-    - op: replace
-      path: /spec/template/spec/containers/0/resources/requests/cpu
-      value: "50m"
-
-- target:
-    kind: Deployment
-    name: frontend
-  patch: |-
-    - op: replace
-      path: /spec/template/spec/containers/0/imagePullPolicy
-      value: IfNotPresent
-    - op: replace
-      path: /spec/replicas
-      value: 1
-
 # --- Production environment config ---
 # CORS_ORIGIN is permissive (*) until a real domain is registered.
 # Once you have a domain, replace * with https://your-domain.com
-- target:
-    kind: ConfigMap
-    name: humor-game-config
-  patch: |-
+# --- GKE StorageClass for PVC (GKE Autopilot default: standard-rwo = GCP Premium PD) ---
+# standard-rwo supports ReadWriteOnce and is the right choice for a single-replica Postgres.
+# Remove this patch if you switch to Cloud SQL.
+patches:
+- patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/imagePullPolicy
+      value: IfNotPresent
+    - op: replace
+      path: /spec/replicas
+      value: 2
+  target:
+    kind: Deployment
+    name: backend
+- patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/imagePullPolicy
+      value: IfNotPresent
+    - op: replace
+      path: /spec/replicas
+      value: 2
+  target:
+    kind: Deployment
+    name: frontend
+- patch: |-
     - op: replace
       path: /data/NODE_ENV
       value: production
@@ -76,36 +65,16 @@ patches:
     - op: replace
       path: /data/FRONTEND_URL
       value: "/"
-
-# --- GKE StorageClass for PVC (GKE Autopilot default: standard-rwo = GCP Premium PD) ---
-# standard-rwo supports ReadWriteOnce and is the right choice for a single-replica Postgres.
-# Remove this patch if you switch to Cloud SQL.
-- target:
-    kind: PersistentVolumeClaim
-    name: postgres-pvc
-  patch: |-
+  target:
+    kind: ConfigMap
+    name: humor-game-config
+- patch: |-
     - op: add
       path: /spec/storageClassName
       value: standard-rwo
-
-# --- Mount custom nginx config for frontend (fixes DNS resolution at startup) ---
-- target:
-    kind: Deployment
-    name: frontend
-  patch: |-
-    - op: add
-      path: /spec/template/spec/volumes
-      value:
-        - name: nginx-config
-          configMap:
-            name: frontend-nginx-config
-    - op: add
-      path: /spec/template/spec/containers/0/volumeMounts
-      value:
-        - name: nginx-config
-          mountPath: /etc/nginx/conf.d/default.conf
-          subPath: default.conf
-
+  target:
+    kind: PersistentVolumeClaim
+    name: postgres-pvc
 commonAnnotations:
-  gitops.argoproj.io/environment: "gke"
-  gitops.argoproj.io/description: "GKE production overlay for Humor Game"
+  gitops.argoproj.io/description: GKE production overlay for Humor Game
+  gitops.argoproj.io/environment: gke
