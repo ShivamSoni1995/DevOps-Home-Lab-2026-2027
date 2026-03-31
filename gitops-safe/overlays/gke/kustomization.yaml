@@ -20,6 +20,7 @@ resources:
 - ingress.yaml
 - network-policies.yaml
 - hpa.yaml
+- frontend-nginx-config.yaml
 
 # Image overrides — CI updates these tags on every successful build.
 # The `name` field must match the image name used in base deployments.
@@ -43,7 +44,10 @@ patches:
       value: IfNotPresent
     - op: replace
       path: /spec/replicas
-      value: 2
+      value: 1
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests/cpu
+      value: "50m"
 
 - target:
     kind: Deployment
@@ -54,7 +58,7 @@ patches:
       value: IfNotPresent
     - op: replace
       path: /spec/replicas
-      value: 2
+      value: 1
 
 # --- Production environment config ---
 # CORS_ORIGIN is permissive (*) until a real domain is registered.
@@ -83,6 +87,24 @@ patches:
     - op: add
       path: /spec/storageClassName
       value: standard-rwo
+
+# --- Mount custom nginx config for frontend (fixes DNS resolution at startup) ---
+- target:
+    kind: Deployment
+    name: frontend
+  patch: |-
+    - op: add
+      path: /spec/template/spec/volumes
+      value:
+        - name: nginx-config
+          configMap:
+            name: frontend-nginx-config
+    - op: add
+      path: /spec/template/spec/containers/0/volumeMounts
+      value:
+        - name: nginx-config
+          mountPath: /etc/nginx/conf.d/default.conf
+          subPath: default.conf
 
 commonAnnotations:
   gitops.argoproj.io/environment: "gke"
