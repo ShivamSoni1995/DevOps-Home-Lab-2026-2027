@@ -41,6 +41,8 @@ spec:
     kind: Deployment
     jsonPointers:
     - /spec/template/metadata/annotations/deployment.kubernetes.io~1revision
+    # /spec/replicas: HPA manages replica counts; ignore to prevent ArgoCD vs HPA conflicts
+    - /spec/replicas
     # GKE Autopilot mutating webhook injects and adjusts resource specs:
     # - ephemeral-storage: always injected by Autopilot (not in any git manifest)
     # - memory requests: bumped to meet Autopilot per-container minimums
