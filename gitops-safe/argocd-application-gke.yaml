@@ -41,6 +41,12 @@ spec:
     kind: Deployment
     jsonPointers:
     - /spec/template/metadata/annotations/deployment.kubernetes.io~1revision
+    # GKE Autopilot mutating webhook injects ephemeral-storage into resource specs
+    jqPathExpressions:
+    - .spec.template.spec.containers[].resources.requests["ephemeral-storage"]
+    - .spec.template.spec.containers[].resources.limits["ephemeral-storage"]
+    - .spec.template.spec.initContainers[].resources.requests["ephemeral-storage"]
+    - .spec.template.spec.initContainers[].resources.limits["ephemeral-storage"]
   - group: ""
     kind: Service
     jsonPointers:
