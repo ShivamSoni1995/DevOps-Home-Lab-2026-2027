@@ -256,3 +256,157 @@ kubectl logs -n kube-system deployment/kube-apiserver
 ---
 
 *This troubleshooting guide covers the most common issues. For specific errors, check the logs and use the diagnostic commands above to gather more information.*
+
+---
+
+## ☁️ GKE Autopilot Issues {#gke-autopilot-issues}
+
+These are real issues hit during the GKE Autopilot deployment of this project. None of them appear in standard Kubernetes docs.
+
+---
+
+### **Network policies silently drop ClusterIP traffic**
+
+**Symptom:** Backend CrashLoopBackOff with "Connection terminated due to connection timeout". Postgres logs show **zero** connection attempts despite backend retrying.
+
+**Root cause:** GKE Autopilot uses Dataplane V2 (Antrea eBPF). It evaluates `podSelector` egress rules **before DNAT** on ClusterIP traffic. The SYN packet matches the NP egress rule against the ClusterIP address, not the pod IP — so it gets dropped before it's translated to a pod IP.
+
+**Fix:** Remove `NetworkPolicy` resources from the GKE overlay. GKE VPC firewalls provide perimeter security. Do not re-add pod-selector-based egress rules without testing.
+
+```bash
+# Verify NPs are gone
+kubectl get networkpolicies -n humor-game
+# Should return: No resources found
+
+# Verify backend connects
+kubectl logs -l app=backend -n humor-game | grep -i "postgres\|redis\|connect"
+```
+
+---
+
+### **ArgoCD permanently OutOfSync — ephemeral-storage / memory**
+
+**Symptom:** `kubectl get applications -n argocd` shows `OutOfSync` even after a successful sync. Diff shows `ephemeral-storage` or memory values that don't exist in git.
+
+**Root cause:** GKE Autopilot's mutating admission webhook automatically injects:
+- `ephemeral-storage` requests and limits into every container spec
+- Bumped memory requests to meet Autopilot per-container minimums (e.g. 64Mi → 103Mi)
+
+None of these are in git, so ArgoCD always sees a diff.
+
+**Fix:** Add `ignoreDifferences` with `jqPathExpressions` to `gitops-safe/argocd-application-gke.yaml`:
+
+```yaml
+ignoreDifferences:
+- group: apps
+  kind: Deployment
+  jsonPointers:
+  - /spec/replicas                          # HPA manages this
+  - /spec/template/metadata/annotations/deployment.kubernetes.io~1revision
+  jqPathExpressions:
+  - .spec.template.spec.containers[].resources.requests["ephemeral-storage"]
+  - .spec.template.spec.containers[].resources.limits["ephemeral-storage"]
+  - .spec.template.spec.initContainers[].resources.requests["ephemeral-storage"]
+  - .spec.template.spec.initContainers[].resources.limits["ephemeral-storage"]
+  - .spec.template.spec.containers[].resources.requests["memory"]
+  - .spec.template.spec.initContainers[].resources.requests["memory"]
+```
+
+```bash
+kubectl apply -f gitops-safe/argocd-application-gke.yaml -n argocd
+kubectl annotate application humor-game-gke -n argocd \
+  argocd.argoproj.io/refresh=normal --overwrite
+```
+
+---
+
+### **Postgres fails to start — "directory not empty"**
+
+**Symptom:** `postgres` pod in CrashLoopBackOff. Logs show:
+```
+initdb: error: directory "/var/lib/postgresql/data" exists but is not empty
+If you want to create a new database system, either remove or empty
+the directory "/var/lib/postgresql/data" or run initdb with an argument
+other than "/var/lib/postgresql/data".
+```
+
+**Root cause:** GKE Autopilot PVCs mount at the root of the filesystem path. A `lost+found` directory is created by the ext4 filesystem at the mount root, making postgres think the data directory is pre-populated.
+
+**Fix:** Set `PGDATA` to a subdirectory inside the mount point:
+
+```yaml
+# In postgres-deployment.yaml
+env:
+- name: PGDATA
+  value: /var/lib/postgresql/data/pgdata
+```
+
+The PVC still mounts at `/var/lib/postgresql/data`, but postgres initialises inside the `pgdata/` subdir which is empty.
+
+---
+
+### **Frontend nginx fails at startup — "host not found in upstream"**
+
+**Symptom:** `frontend` pod in CrashLoopBackOff. Logs show:
+```
+nginx: [emerg] host not found in upstream "backend" in /etc/nginx/conf.d/default.conf:10
+```
+
+**Root cause:** nginx resolves upstream hostnames at startup, not at request time. If the `backend` service isn't fully ready when nginx starts, DNS lookup fails and nginx refuses to start.
+
+**Fix:** Use a `resolver` directive with the kube-dns ClusterIP and assign the upstream to a variable. nginx only resolves variables at request time.
+
+```nginx
+# frontend-nginx-config ConfigMap (gitops-safe/overlays/gke/frontend-nginx-config.yaml)
+resolver 34.118.224.10 valid=10s;   # kube-dns ClusterIP for this cluster
+
+location /api/ {
+    set $backend_url http://backend.humor-game.svc.cluster.local:3001;
+    proxy_pass $backend_url;
+}
+```
+
+To find your kube-dns ClusterIP:
+```bash
+kubectl get svc kube-dns -n kube-system -o jsonpath='{.spec.clusterIP}'
+```
+
+---
+
+### **ArgoCD vs HPA replica drift**
+
+**Symptom:** Deployments show `OutOfSync`. Diff shows `replicas: 1` in git vs `replicas: 2` in cluster.
+
+**Root cause:** HPA has `minReplicas: 2`, but the kustomization patch was setting `replicas: 1`. ArgoCD's selfHeal kept forcing it back to 1, fighting the HPA.
+
+**Fix:** Two-part:
+1. Remove any `replicas` patches from kustomization that conflict with HPA's `minReplicas`
+2. Add `/spec/replicas` to ArgoCD `ignoreDifferences` — this is the standard pattern for any deployment managed by an HPA
+
+```yaml
+ignoreDifferences:
+- group: apps
+  kind: Deployment
+  jsonPointers:
+  - /spec/replicas
+```
+
+---
+
+### **Pods stuck Pending — CPU/memory requests at 99%**
+
+**Symptom:** New pods remain in `Pending` state. `kubectl describe pod` shows `Insufficient cpu`.
+
+**Root cause:** GKE Autopilot accounts for system pod requests against node capacity. Even with 2 nodes, Autopilot system pods can consume 60–70% of the request budget, leaving little room for workloads.
+
+**Fix:** Reduce CPU/memory requests to the minimum needed:
+- ArgoCD components: reduce from 500m → 100m CPU
+- Postgres: reduce from 250m → 50m CPU  
+- Backend/Frontend: reduce from 100m → 50m CPU
+
+Autopilot will still scale nodes if actual usage grows. Requests only govern scheduling, not actual limits.
+
+```bash
+# Check what's consuming request budget
+kubectl describe nodes | grep -A 20 "Allocated resources"
+```

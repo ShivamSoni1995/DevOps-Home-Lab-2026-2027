@@ -1,243 +1,101 @@
-# 📚 Kubernetes Tutorial Documentation Hub
+# 📚 DevOps Home Lab — Documentation
 
-*Learn DevOps by building a real application: Docker → Kubernetes → Monitoring → GitOps → Global Deployment*
+*Learn production DevOps by building and deploying the Humor Memory Game: Docker → Kubernetes → GitOps → GKE*
 
-[![Documentation](https://img.shields.io/badge/Documentation-Complete-green?style=for-the-badge)](./00-overview.md)
-[![Beginner Friendly](https://img.shields.io/badge/Beginner-Friendly-blue?style=for-the-badge)](./01-prereqs.md)
-[![Production Ready](https://img.shields.io/badge/Production-Ready-red?style=for-the-badge)](./07-global.md)
+[![Live App](https://img.shields.io/badge/Live_App-GKE-blue?style=for-the-badge)](http://34.44.151.3)
+[![ArgoCD](https://img.shields.io/badge/GitOps-ArgoCD-orange?style=for-the-badge)](./argocd-deep-dive.md)
+[![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub_Actions-black?style=for-the-badge)](./ci-cd-pipeline.md)
 
 ## 🎮 **Application Preview**
 
 ![Humor Memory Game Interface](../assets/images/hga.jpg)
 
-*The Humor Memory Game: A DevOps Learning Adventure! - A web-based memory game featuring a 4x4 grid of cards, game statistics, and navigation tabs for Game, Leaderboard, My Stats, and About.*
+*The Humor Memory Game — a 4×4 card memory game with leaderboard, scoring, and stats. Running live on GKE Autopilot at `http://34.44.151.3`.*
 
 ---
 
-## 🎯 **Quick Navigation**
+## 🗺️ Learning Path
 
-| 🚀 **Start Here** | 📚 **Core Guides** | 🔧 **Reference** | 🎓 **Career** |
-|-------------------|-------------------|------------------|---------------|
-| [Overview](00-overview.md) | [Prerequisites](01-prereqs.md) | [Troubleshooting](08-troubleshooting.md) | [Interview Prep](../interviewprep.md) |
-| [Learning Path](#learning-path) | [Docker Compose](02-compose.md) | [FAQ](09-faq.md) | [Medium Article](../medium-blog-post.md) |
-| [Prerequisites](01-prereqs.md) | [Kubernetes Basics](03-k8s-basics.md) | [Glossary](10-glossary.md) | [Technical Deep Dives](#technical-deep-dives) |
+Two tracks depending on your goal:
 
----
+### Track A — Local Development (Learn the concepts)
 
-## 📋 **Complete Learning Path**
+| Step | Guide | What You'll Learn | Time |
+|------|-------|-------------------|------|
+| 0 | [Overview](00-overview.md) | Architecture and full roadmap | 15 min |
+| 1 | [Prerequisites](01-prereqs.md) | Docker, kubectl, local tooling | 30 min |
+| 2 | [Docker Compose](02-compose.md) | Multi-container local dev | 45 min |
+| 3 | [Kubernetes Basics](03-k8s-basics.md) | Deploy on local k3d cluster | 60 min |
+| 4 | [Ingress & Networking](04-ingress.md) | Route traffic into your cluster | 45 min |
+| 5 | [Observability](05-observability.md) | Prometheus + Grafana monitoring | 90 min |
+| 6 | [GitOps](06-gitops.md) | ArgoCD automated deployments | 60 min |
 
-### **🎯 Core Milestones** *(Follow in order)*
+### Track B — GKE Production (What's actually running)
 
-| Step | Guide | What You'll Learn | Time | Difficulty |
-|------|-------|-------------------|------|------------|
-| **0** | [📖 Learning Path Overview](00-overview.md) | Complete tutorial roadmap and architecture | 15 min | 🟢 Beginner |
-| **1** | [⚙️ Development Environment Setup](01-prereqs.md) | Install Docker, Kubernetes tools, and dev environment | 30 min | 🟢 Beginner |
-| **2** | [🐳 Docker Multi-Container App](02-compose.md) | Build your first containerized application | 45 min | 🟢 Beginner |
-| **3** | [☸️ Kubernetes Production Deployment](03-k8s-basics.md) | Deploy apps on Kubernetes with databases | 60 min | 🟡 Intermediate |
-| **4** | [🌐 Internet Access & Networking](04-ingress.md) | Make your app accessible from the internet | 45 min | 🟡 Intermediate |
-| **5** | [📊 Performance Monitoring](05-observability.md) | Track app health with Prometheus & Grafana | 90 min | 🟡 Intermediate |
-| **6** | [🔄 Automated Deployments](06-gitops.md) | Deploy with GitOps automation | 60 min | 🟠 Advanced |
-| **7** | [🌍 Global Scale & Security](07-global.md) | Production hardening, CDN, and auto-scaling | 120 min | 🔴 Expert |
-
-**⏱️ Total Time**: 5-8 hours  
-**🎯 Final Result**: Production-ready Kubernetes deployment with global access
+| Step | Guide | What You'll Learn | Time |
+|------|-------|-------------------|------|
+| 1 | [GKE Setup](gke-setup.md) | Bootstrap GCP infra, WIF, Artifact Registry, cluster | 60 min |
+| 2 | [CI/CD Pipeline](ci-cd-pipeline.md) | GitHub Actions → build → push → ArgoCD sync | 30 min |
+| 3 | [GKE Validation](gke-migration-validation.md) | Verify the full stack is healthy | 20 min |
+| 4 | [GitOps Deep Dive](argocd-deep-dive.md) | How ArgoCD manages the live cluster | 30 min |
 
 ---
 
-## 🔧 **Reference Documentation**
+## 🔧 Reference
 
-### **📖 Technical References**
-- **[🚨 Troubleshooting Guide](08-troubleshooting.md)** - Common issues and solutions
-- **[❓ Frequently Asked Questions](09-faq.md)** - Quick answers to common questions  
-- **[📖 Technical Glossary](10-glossary.md)** - Terms and definitions explained
-- **[📝 Architecture Decisions](11-decision-notes.md)** - Why we chose specific technologies
+### Core Reference
+- [Troubleshooting Guide](08-troubleshooting.md) — common issues including GKE Autopilot gotchas
+- [GitOps Troubleshooting](gitops-troubleshooting.md) — ArgoCD sync problems and merge conflicts
+- [FAQ](09-faq.md) — quick answers
+- [Glossary](10-glossary.md) — terms and definitions
+- [Architecture Decisions](11-decision-notes.md) — why we chose each technology
 
-### **🛠️ Advanced Guides**
-- **[🔒 Security Contexts Deep Dive](security-contexts-guide.md)** - Production security hardening
-- **[📊 Custom Dashboard Guide](custom-dashboard-guide.md)** - Building monitoring dashboards
-- **[🌐 Cloudflare Setup Guide](cloudflare-tunnel-setup-guide.md)** - Global CDN configuration
-- **[🔍 Monitoring Troubleshooting](monitoring-troubleshooting.md)** - Observability issues
-
-### **🎓 Career Development**
-- **[🎤 Interview Preparation](../interviewprep.md)** - Technical interview questions and answers
-- **[📝 Medium Blog Template](../medium-blog-post.md)** - Professional project writeup
-- **[🏗️ Architecture Diagrams](architecture/)** - Visual system documentation
+### Deep Dives
+- [ArgoCD Deep Dive](argocd-deep-dive.md) — GitOps internals and sync mechanics
+- [Network Policy Interview Guide](network-policy-interview-guide.md) — K8s NP for interviews
+- [Security Contexts Guide](security-contexts-guide.md) — container security hardening
 
 ---
 
-## 🎭 **Choose Your Learning Style**
+## 🚀 Quick Start (GKE — already running)
 
-### **🚀 Fast Track** *(Experienced Users)*
 ```bash
-# Deploy everything at once
-git clone https://github.com/Osomudeya/DevOps-Home-Lab-2025.git
-cd humor-memory-game
-make deploy-all
-make verify
-```
-**Time**: 30-60 minutes  
-**Skills**: Kubernetes, Docker, kubectl experience required
+# Check live app
+curl http://34.44.151.3/api/health
 
-### **📚 Guided Learning** *(Recommended for Beginners)*
-1. Start with [Project Overview](00-overview.md)
-2. Follow each milestone guide in order
-3. Complete hands-on exercises
-4. Build production skills incrementally
-
-**Time**: 5-8 hours  
-**Skills**: Suitable for beginners to intermediate
-
-### **🎯 Topic-Specific** *(Focused Learning)*
-- **Monitoring Only**: [Observability Guide](05-observability.md)
-- **Security Focus**: [Security Contexts Guide](security-contexts-guide.md)
-- **GitOps Workflow**: [GitOps Guide](06-gitops.md)
-- **Global Deployment**: [Global Production Guide](07-global.md)
-
----
-
-## 🏗️ **Technical Deep Dives**
-
-### **🔍 Architecture Analysis**
-- **[System Architecture Overview](00-overview.md#architecture-overview)** - Complete system design
-- **[Network Flow Diagrams](04-ingress.md#network-architecture)** - Traffic routing and load balancing
-- **[Security Architecture](security-contexts-guide.md)** - Defense-in-depth implementation
-- **[Monitoring Strategy](05-observability.md#monitoring-strategy)** - Observability best practices
-
-### **⚙️ Technology Choices**
-- **[Kubernetes vs. Docker Compose](11-decision-notes.md#orchestration)** - When and why to use each
-- **[Ingress Controller Comparison](04-ingress.md#controller-options)** - NGINX vs. Traefik vs. others
-- **[Monitoring Stack Selection](05-observability.md#tool-comparison)** - Prometheus vs. alternatives
-- **[GitOps Tool Analysis](06-gitops.md#tool-comparison)** - ArgoCD vs. Flux vs. others
-
-### **🚀 Performance Optimization**
-- **[Resource Tuning Guide](03-k8s-basics.md#resource-optimization)** - CPU and memory optimization
-- **[Auto-scaling Configuration](07-global.md#horizontal-pod-autoscaling)** - HPA setup and tuning
-- **[CDN Integration](07-global.md#cloudflare-optimization)** - Global performance optimization
-- **[Database Performance](03-k8s-basics.md#database-optimization)** - PostgreSQL and Redis tuning
-
----
-
-## 🆘 **Getting Help**
-
-### **🔧 Quick Diagnostic Commands**
-```bash
-# Application health check
+# Check cluster state
+export USE_GKE_GCLOUD_AUTH_PLUGIN=True
 kubectl get pods -n humor-game
-kubectl get svc -n humor-game
-curl -H "Host: gameapp.local" http://localhost:8080/api/health
-
-# Monitoring status
-kubectl get pods -n monitoring
-kubectl port-forward svc/grafana -n monitoring 3000:3000
-
-# GitOps status
 kubectl get applications -n argocd
-kubectl get pods -n argocd
+
+# Deploy a change (triggers full CI/CD pipeline)
+git checkout -b feature/my-change
+# ... make code changes in backend/ or frontend/ ...
+git push -u origin feature/my-change
+# Open PR → merge to main → CI builds → ArgoCD syncs automatically
 ```
 
-### **📞 Support Channels**
-- 🐛 **Found a bug?** → [Open GitHub Issue](https://github.com/Osomudeya/DevOps-Home-Lab-2025.git/issues)
-- 💬 **Have questions?** → [GitHub Discussions](https://github.com/Osomudeya/DevOps-Home-Lab-2025.git/discussions)
-- 📖 **Need clarification?** → Check [FAQ](09-faq.md) or [Glossary](10-glossary.md)
-- 🎓 **Want to contribute?** → See [GitHub Issues](https://github.com/Osomudeya/DevOps-Home-Lab-2025.git/issues)
+---
 
-### **🚨 Emergency Troubleshooting**
-1. **Pods won't start**: Check [Troubleshooting Guide](08-troubleshooting.md#pod-issues)
-2. **Can't access application**: See [Network Troubleshooting](08-troubleshooting.md#network-issues)
-3. **ArgoCD problems**: Check [GitOps Troubleshooting](gitops-troubleshooting.md)
-4. **Monitoring not working**: See [Monitoring Troubleshooting](monitoring-troubleshooting.md)
+## ✅ Current Production State
+
+| Component | Status | Details |
+|-----------|--------|---------|
+| GKE Autopilot cluster | ✅ Running | `humor-game-gke`, us-central1 |
+| Backend (×2 pods) | ✅ Healthy | Node.js Express, HPA min=2 |
+| Frontend (×2 pods) | ✅ Healthy | Nginx + Vanilla JS, HPA min=2 |
+| PostgreSQL | ✅ Healthy | Persistent volume, `standard-rwo` |
+| Redis | ✅ Healthy | In-memory cache |
+| ingress-nginx | ✅ Healthy | LoadBalancer IP `34.44.151.3` |
+| ArgoCD | ✅ Synced / Healthy | Auto-sync + selfHeal on |
+| CI Pipeline | ✅ Active | Builds on push to `main` |
 
 ---
 
-## 🎯 **Success Criteria**
+## 📞 Getting Help
 
-### **✅ Milestone Completion Checklist**
-
-**After completing all guides, you should have:**
-- ✅ **4 microservices** running in separate pods
-- ✅ **Local Kubernetes cluster** with k3d
-- ✅ **Production ingress** with custom domains
-- ✅ **Comprehensive monitoring** with Prometheus and Grafana
-- ✅ **GitOps automation** with ArgoCD
-- ✅ **Global CDN access** via Cloudflare
-- ✅ **Production security** with network policies and security contexts
-- ✅ **Auto-scaling** with horizontal pod autoscaling
-
-### **🎓 Skills Gained**
-- **Container Orchestration**: Deploy and manage Kubernetes applications
-- **Infrastructure as Code**: Declarative configuration management
-- **Monitoring & Observability**: Metrics collection and visualization
-- **GitOps Workflows**: Automated, auditable deployments
-- **Production Security**: Network isolation and container hardening
-- **Global Scale**: CDN integration and performance optimization
-
-### **💼 Career Impact**
-- **Resume Projects**: Production-grade Kubernetes deployment
-- **Interview Preparation**: Technical questions and hands-on experience
-- **Industry Knowledge**: Modern DevOps practices and tools
-- **Portfolio Development**: Documented, live-running application
-
----
-
-## 📊 **Learning Resources**
-
-### **🎥 Video Supplements** *(Coming Soon)*
-- Architecture walkthrough and explanation
-- Live troubleshooting sessions
-- Interview preparation mock sessions
-- Advanced topics deep dives
-
-### **📝 External Learning**
-- **[Kubernetes Official Documentation](https://kubernetes.io/docs/)**
-- **[Prometheus Monitoring Guide](https://prometheus.io/docs/)**
-- **[ArgoCD Documentation](https://argo-cd.readthedocs.io/)**
-- **[Cloudflare Developers](https://developers.cloudflare.com/)**
-
-### **🏢 Enterprise Considerations**
-- **Multi-cluster deployments** and federation
-- **Enterprise security** and compliance requirements
-- **Cost optimization** strategies at scale
-- **Team collaboration** and access control
-
----
-
-## 🌟 **Community Success Stories**
-
-> *"Followed this guide to land my first DevOps role at a Fortune 500 company. The interview prep was invaluable!"*  
-> **— Sarah K., DevOps Engineer**
-
-> *"Used this as the foundation for our startup's infrastructure. Saved us 6 months of research and trial-and-error."*  
-> **— Alex T., CTO**
-
-> *"Finally understand the connection between Docker, Kubernetes, and production deployments. Best hands-on tutorial I've found."*  
-> **— Mike R., Full-Stack Developer**
-
----
-
-## 🤝 **Contributing to Documentation**
-
-We welcome contributions to improve these guides! Here's how you can help:
-
-### **📝 Documentation Improvements**
-- Fix typos and grammatical errors
-- Add missing explanations or examples
-- Improve code snippets and commands
-- Enhance troubleshooting sections
-
-### **🎓 Educational Enhancements**
-- Add beginner-friendly explanations
-- Create visual diagrams and flowcharts
-- Develop hands-on exercises
-- Share real-world use cases
-
-### **🔧 Technical Updates**
-- Update for new tool versions
-- Add advanced configuration options
-- Improve security recommendations
-- Optimize performance suggestions
-
-**📋 See**: [GitHub Issues](https://github.com/Osomudeya/DevOps-Home-Lab-2025.git/issues) for detailed instructions
-
----
-
-*Ready to start your production Kubernetes journey? Begin with the [Project Overview](00-overview.md) or jump straight into [Prerequisites Setup](01-prereqs.md)!*
+- **Pods won't start** → [Troubleshooting: Pod Issues](08-troubleshooting.md#pod-issues)
+- **ArgoCD OutOfSync** → [GitOps Troubleshooting](gitops-troubleshooting.md)
+- **GKE-specific issues** → [Troubleshooting: GKE Autopilot](08-troubleshooting.md#gke-autopilot-issues)
+- **Pipeline not running** → [CI/CD Pipeline Guide](ci-cd-pipeline.md)
+- **GitHub Issues** → [ShivamSoni1995/DevOps-Home-Lab-2026-2027](https://github.com/ShivamSoni1995/DevOps-Home-Lab-2026-2027/issues)
