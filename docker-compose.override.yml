@@ -23,7 +23,6 @@ services:
     environment:
       - API_BASE_URL=/api  # Force override .env value for local development
       - NODE_ENV=development
-      - REACT_APP_API_BASE_URL=/api  # React environment variable
       - BUILD_TIMESTAMP=1734750000  # Cache busting - fixed timestamp
     env_file:
       - .env  # Load base .env first
