@@ -13,13 +13,13 @@ kind: Kustomization
 namespace: humor-game
 
 # Inherit all base resources (postgres, redis, backend, frontend, configmap, pvc, etc.)
-resources:
-- ../../base
-- ingress.yaml
 # network-policies.yaml excluded: GKE Autopilot Dataplane V2 (Antrea eBPF)
 # evaluates egress podSelector rules BEFORE DNAT on ClusterIP traffic, causing
 # pod-to-service connections to be silently dropped even with correct policies.
 # Rely on GKE VPC firewall rules for perimeter security instead.
+resources:
+- ../../base
+- ingress.yaml
 - hpa.yaml
 - frontend-nginx-config.yaml
 
@@ -29,39 +29,44 @@ resources:
 images:
 - name: humor-game-backend
   newName: us-central1-docker.pkg.dev/gke-project-491822/humor-game/backend
-  newTag: 26ea967
+  newTag: 9c24780
 - name: humor-game-frontend
   newName: us-central1-docker.pkg.dev/gke-project-491822/humor-game/frontend
-  newTag: 26ea967
+  newTag: 9c24780
 
-patches:
 # --- Fix imagePullPolicy (base uses Never for local k3d) ---
-- target:
-    kind: Deployment
-    name: backend
-  patch: |-
+
+
+# --- Production environment config ---
+# CORS_ORIGIN is permissive (*) until a real domain is registered.
+# Once you have a domain, replace * with https://your-domain.com
+
+# --- GKE StorageClass for PVC (GKE Autopilot default: standard-rwo = GCP Premium PD) ---
+# standard-rwo supports ReadWriteOnce and is the right choice for a single-replica Postgres.
+# Remove this patch if you switch to Cloud SQL.
+
+# --- Mount custom nginx config for frontend (fixes DNS resolution at startup) ---
+# nginx resolves upstream hostnames at startup. Using a variable with a resolver directive
+# forces runtime DNS resolution so nginx starts even if backend isn't ready yet.
+patches:
+- patch: |-
     - op: replace
       path: /spec/template/spec/containers/0/imagePullPolicy
       value: IfNotPresent
     - op: replace
       path: /spec/template/spec/containers/0/resources/requests/cpu
       value: "50m"
-
-- target:
+  target:
     kind: Deployment
-    name: frontend
-  patch: |-
+    name: backend
+- patch: |-
     - op: replace
       path: /spec/template/spec/containers/0/imagePullPolicy
       value: IfNotPresent
-
-# --- Production environment config ---
-# CORS_ORIGIN is permissive (*) until a real domain is registered.
-# Once you have a domain, replace * with https://your-domain.com
-- target:
-    kind: ConfigMap
-    name: humor-game-config
-  patch: |-
+  target:
+    kind: Deployment
+    name: frontend
+- patch: |-
     - op: replace
       path: /data/NODE_ENV
       value: production
@@ -71,25 +76,17 @@ patches:
     - op: replace
       path: /data/FRONTEND_URL
       value: "/"
-
-# --- GKE StorageClass for PVC (GKE Autopilot default: standard-rwo = GCP Premium PD) ---
-# standard-rwo supports ReadWriteOnce and is the right choice for a single-replica Postgres.
-# Remove this patch if you switch to Cloud SQL.
-- target:
-    kind: PersistentVolumeClaim
-    name: postgres-pvc
-  patch: |-
+  target:
+    kind: ConfigMap
+    name: humor-game-config
+- patch: |-
     - op: add
       path: /spec/storageClassName
       value: standard-rwo
-
-# --- Mount custom nginx config for frontend (fixes DNS resolution at startup) ---
-# nginx resolves upstream hostnames at startup. Using a variable with a resolver directive
-# forces runtime DNS resolution so nginx starts even if backend isn't ready yet.
-- target:
-    kind: Deployment
-    name: frontend
-  patch: |-
+  target:
+    kind: PersistentVolumeClaim
+    name: postgres-pvc
+- patch: |-
     - op: add
       path: /spec/template/spec/volumes
       value:
@@ -102,7 +99,10 @@ patches:
         - name: nginx-config
           mountPath: /etc/nginx/conf.d/default.conf
           subPath: default.conf
+  target:
+    kind: Deployment
+    name: frontend
 
 commonAnnotations:
-  gitops.argoproj.io/environment: "gke"
-  gitops.argoproj.io/description: "GKE production overlay for Humor Game"
+  gitops.argoproj.io/description: GKE production overlay for Humor Game
+  gitops.argoproj.io/environment: gke
