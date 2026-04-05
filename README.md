@@ -47,14 +47,14 @@ By completing this tutorial, you'll master:
 
 # 2. Follow step-by-step guides
 # Start with: docs/01-prereqs.md
-# Then follow: docs/02-compose.md → ... → docs/07-global.md
+# Then follow: docs/02-compose.md → ... → docs/06-gitops.md → docs/gke-setup.md
 ```
 
 ### **Option 2: Fast Deploy (For Experienced Users)**
 ```bash
 # Deploy everything at once
-git clone https://github.com/Osomudeya/DevOps-Home-Lab-2025.git
-cd DevOps-Home-Lab-2025
+git clone https://github.com/ShivamSoni1995/DevOps-Home-Lab-2026-2027
+cd DevOps-Home-Lab-2026-2027
 make deploy-all
 
 # Verify deployment
@@ -90,11 +90,11 @@ curl http://localhost:3001/api/health
 | **Application** | Node.js + Express, Vanilla JS | Game logic and UI |
 | **Database** | PostgreSQL 15, Redis 7 | Persistent data and caching |
 | **Container** | Docker, Multi-stage builds | Application packaging |
-| **Orchestration** | Kubernetes (k3d), NGINX Ingress | Container management |
+| **Orchestration** | Kubernetes (GKE Autopilot), NGINX Ingress | Container management |
 | **Monitoring** | Prometheus, Grafana | Metrics and visualization |
 | **GitOps** | ArgoCD, Git-based workflows | Automated deployments |
 | **Security** | Network Policies, Security Contexts | Defense-in-depth |
-| **Global Access** | Cloudflare CDN + Tunnels | Worldwide distribution |
+| **Access** | GKE LoadBalancer + ingress-nginx | External traffic routing |
 
 ---
 
@@ -108,7 +108,8 @@ curl http://localhost:3001/api/health
 | **[3. Production Ingress](docs/04-ingress.md)** | Internet access and networking | 30-45 min | 🟡 Intermediate |
 | **[4. Observability](docs/05-observability.md)** | Performance monitoring | 60-90 min | 🟡 Intermediate |
 | **[5. GitOps](docs/06-gitops.md)** | Automated deployments | 45-60 min | 🟠 Advanced |
-| **[6. Global Production](docs/07-global.md)** | Global scale and security | 90-120 min | 🔴 Expert |
+| **[6. CI/CD Pipeline](docs/ci-cd-pipeline.md)** | GitHub Actions build, push, ArgoCD deploy | 30 min | 🟠 Advanced |
+| **[7. GKE Production](docs/gke-setup.md)** | Bootstrap Google Kubernetes Engine | 60 min | 🔴 Expert |
 
 **📚 Total Learning Time**: 5-8 hours  
 **🎯 Skill Level**: Beginner to Production-Ready DevOps Engineer
@@ -158,7 +159,8 @@ curl http://localhost:3001/api/health
 - **[🌐 Internet Access & Networking](docs/04-ingress.md)** - Make your app accessible worldwide
 - **[📊 Performance Monitoring](docs/05-observability.md)** - Track app health and performance
 - **[🔄 Automated Deployments](docs/06-gitops.md)** - Deploy with GitOps automation
-- **[🌍 Global Scale & Security](docs/07-global.md)** - Production hardening and CDN
+- **[☁️ GKE Setup](docs/gke-setup.md)** - Deploy to Google Kubernetes Engine
+- **[⚙️ CI/CD Pipeline](docs/ci-cd-pipeline.md)** - GitHub Actions + ArgoCD automated deployments
 
 ### **🔧 Reference Materials**
 - **[🚨 Troubleshooting](docs/08-troubleshooting.md)** - Common issues and solutions
@@ -168,11 +170,9 @@ curl http://localhost:3001/api/health
 
 ### **🛠️ Advanced Guides**
 - **[🔒 Security Contexts](docs/security-contexts-guide.md)** - Production security hardening
-- **[📊 Custom Dashboards](docs/custom-dashboard-guide.md)** - Build monitoring dashboards
-- **[🌐 Cloudflare Setup](docs/cloudflare-tunnel-setup-guide.md)** - Global CDN configuration
-- **[🔍 Monitoring Troubleshooting](docs/monitoring-troubleshooting.md)** - Fix monitoring issues
 - **[🔄 GitOps Deep Dive](docs/argocd-deep-dive.md)** - Advanced GitOps patterns
-- **[🌍 Global Deployment](docs/global-deployment-troubleshooting.md)** - Production scaling issues
+- **[🌐 Network Policy Guide](docs/network-policy-interview-guide.md)** - Kubernetes network policy deep dive
+- **[🔒 GitOps Troubleshooting](docs/gitops-troubleshooting.md)** - ArgoCD sync issues and fixes
 
 ### **🎯 Career Development**
 - **[🎤 Interview Prep Guide](interviewprep.md)** - Technical interview preparation
@@ -188,14 +188,15 @@ curl http://localhost:3001/api/health
 
 ## ⚠️ **Important Setup Notes**
 
-### **🔑 Domain Configuration**
-> **CRITICAL**: This project uses `gameapp.games` as an example domain. For your own deployment:
-> 1. **Get a domain** (free options available for learning)
-> 2. Replace all instances of `gameapp.games` with your domain
-> 3. Configure Cloudflare DNS for your domain
-> 4. Update ingress configurations accordingly
-> 
-> **📝 See**: [Domain Replacement Guide](docs/domain-replacement-guide.md) | [Free Domain Setup](docs/07-global.md#step-3a-prerequisites---get-a-domain)
+### **🌐 Live Deployment**
+> **This project is deployed on GKE Autopilot and accessible at:**
+>
+> `http://34.44.151.3` — Humor Memory Game (live)
+> `http://34.44.151.3/api/health` — Health check endpoint
+>
+> The deployment uses a raw LoadBalancer IP. To add a custom domain, update
+> `gitops-safe/overlays/gke/ingress.yaml` with your hostname and configure
+> cert-manager for TLS. See [gke-setup.md](docs/gke-setup.md) for details.
 
 ### **💻 System Requirements**
 - **RAM**: 4GB+ available for Kubernetes cluster
@@ -256,7 +257,8 @@ make clean-gitops
 
 # Nuclear option - remove everything
 make clean-all
-k3d cluster delete dev-cluster
+# To delete the GKE cluster:
+# gcloud container clusters delete humor-game-gke --region=us-central1
 ```
 
 ---
@@ -264,8 +266,8 @@ k3d cluster delete dev-cluster
 ## 🆘 **Getting Help**
 
 ### **📞 Support Channels**
-- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/Osomudeya/DevOps-Home-Lab-2025/issues)
-- 💬 **Questions**: [GitHub Discussions](https://github.com/Osomudeya/DevOps-Home-Lab-2025/discussions)
+- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/ShivamSoni1995/DevOps-Home-Lab-2026-2027/issues)
+- 💬 **Questions**: [GitHub Discussions](https://github.com/ShivamSoni1995/DevOps-Home-Lab-2026-2027/discussions)
 - 📖 **Documentation**: [Troubleshooting Guide](docs/08-troubleshooting.md)
 - 🎓 **Learning**: [FAQ Section](docs/09-faq.md)
 
@@ -293,7 +295,7 @@ We welcome contributions! Here's how you can help:
 - 🔧 **Add new features** or troubleshooting guides
 - ⭐ **Star the repository** to show support
 
-**📋 See**: [GitHub Issues](https://github.com/Osomudeya/DevOps-Home-Lab-2025.git/issues) for bug reports and feature requests
+**📋 See**: [GitHub Issues](https://github.com/ShivamSoni1995/DevOps-Home-Lab-2026-2027/issues) for bug reports and feature requests
 
 ---
 
@@ -316,10 +318,9 @@ Special thanks to the open-source community and the maintainers of:
 
 ## 📈 **Project Stats**
 
-![GitHub stars](https://img.shields.io/github/stars/Osomudeya/DevOps-Home-Lab-2025?style=social)
-![GitHub forks](https://img.shields.io/github/forks/Osomudeya/DevOps-Home-Lab-2025?style=social)
-![GitHub downloads](https://img.shields.io/github/downloads/Osomudeya/DevOps-Home-Lab-2025/total?style=social)
-![GitHub last commit](https://img.shields.io/github/last-commit/Osomudeya/DevOps-Home-Lab-2025)
+![GitHub stars](https://img.shields.io/github/stars/ShivamSoni1995/DevOps-Home-Lab-2026-2027?style=social)
+![GitHub forks](https://img.shields.io/github/forks/ShivamSoni1995/DevOps-Home-Lab-2026-2027?style=social)
+![GitHub last commit](https://img.shields.io/github/last-commit/ShivamSoni1995/DevOps-Home-Lab-2026-2027)
 
 **📊 Learning Impact**: 1000+ developers trained • 50+ companies using in production • 95% positive feedback
 
@@ -332,7 +333,7 @@ Special thanks to the open-source community and the maintainers of:
 - ✅ **Monitoring stack** with Prometheus and Grafana
 - ✅ **GitOps automation** with ArgoCD
 - ✅ **Production security** with network policies
-- ✅ **Global access** via Cloudflare CDN
+- ✅ **Live on GKE** at `http://34.44.151.3`
 
 ---
 
@@ -341,14 +342,14 @@ Special thanks to the open-source community and the maintainers of:
 ---
 ## Where to go next
 
-- ✅ **Stuck?** Open the **DevOps-Troubleshooting-Toolkit**: [https://github.com/Osomudeya/DevOps-Troubleshooting-Toolkit.git](https://github.com/Osomudeya/DevOps-Troubleshooting-Toolkit.git)
+- ✅ **Stuck?** Open the **DevOps-Troubleshooting-Toolkit**: [https://github.com/ShivamSoni1995/DevOps-Home-Lab-2026-2027](https://github.com/ShivamSoni1995/DevOps-Home-Lab-2026-2027)
   - Linux • Docker • Kubernetes • AWS • Azure • Observability
 
 - 🚶 **If you're early in your journey:** Start/continue the core path  
-  → **Beginner-DevOps-Labs** (Milestones 0 → 6) This repo Link: [https://github.com/Osomudeya/DevOps-Home-Lab-2025.git](https://github.com/Osomudeya/DevOps-Home-Lab-2025.git)
+  → **This Repo** (Milestones 0 → 7 + GKE): [DevOps-Home-Lab-2026-2027](https://github.com/ShivamSoni1995/DevOps-Home-Lab-2026-2027)
 
 - 🧰 **Want small, visual wins:**  
   → **Quick DevOps Wins** (this repo)
 
 - 📦 **Ready for portfolio depth:**  
-  → **Weekend-DevOps-Projects** (5 focused, resume-grade builds) Link: [https://github.com/Osomudeya/side-devops-projects.git](https://github.com/Osomudeya/side-devops-projects.git)
+  → **Weekend-DevOps-Projects** (focused, resume-grade builds): create a separate repo for side projects
